@@ -36,22 +36,43 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			// Handle preflight request
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r) // Continue with request handling
+	})
+}
+
 func main() {
-
 	r := mux.NewRouter()
+	r.Use(corsMiddleware) // Apply the CORS middleware globally
 
-	tasks = append(tasks, Task{ID: "1", Title: "First Title", Description: "First Description"})
-	tasks = append(tasks, Task{ID: "2", Title: "Second Title", Description: "Second Description"})
-	tasks = append(tasks, Task{ID: "3", Title: "Third Title", Description: "Third Description"})
-	tasks = append(tasks, Task{ID: "4", Title: "Fourth Title", Description: "Fourth Description"})
-	tasks = append(tasks, Task{ID: "5", Title: "Fifth Title", Description: "Fifth Description"})
-	tasks = append(tasks, Task{ID: "6", Title: "Sixth Title", Description: "Sixth Description"})
+	// Define your routes...
 
+	// Pre-fill some tasks for testing
+	tasks = append(tasks, Task{ID: "1", Title: "First Task", Description: "First Description"})
+	tasks = append(tasks, Task{ID: "2", Title: "Second Task", Description: "Second Description"})
+	tasks = append(tasks, Task{ID: "3", Title: "Third Task", Description: "Third Description"})
+	tasks = append(tasks, Task{ID: "4", Title: "Fourth Task", Description: "Fifth Description"})
+
+	// Handle CORS preflight requests
+	// Define routes for the RESTful API
 	r.HandleFunc("/api/tasks", getTasks).Methods("GET")
 	r.HandleFunc("/api/tasks/{id}", getTask).Methods("GET")
 	r.HandleFunc("/api/tasks", createTask).Methods("POST")
 	r.HandleFunc("/api/tasks/{id}", updateTask).Methods("PUT")
 	r.HandleFunc("/api/tasks/{id}", deleteTask).Methods("DELETE")
 
+	// Start the server on port 8000
 	log.Fatal(http.ListenAndServe(":8000", r))
+
 }

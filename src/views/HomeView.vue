@@ -1,43 +1,56 @@
 <template>
-<h2>Task Management System</h2>
-
-<div>
-    <h1>All Tasks</h1>
-    <ul>
-      <li v-for="task in tasks" :key="task.id">
-        {{ task.title }}
-      </li>
-    </ul>
+  <div>
+    <h1>Data from API:</h1>
+    <ol>
+      <li v-for="item in tasks" :key="item.id">
+        <div class="task">
+          <h4>{{item.title}}</h4>
+        <p>{{item.description}}</p>
+        </div>
+        </li>
+    </ol>
   </div>
-
-
 </template>
 
 <script>
-// @ is an alias to /src
+
 import axios from 'axios';
+
 export default {
   data(){
     return {
-      tasks: []
-    }
+      tasks: [],
+    };
   },
-  mounted(){
-    axios.get('http://www.localhost:8000/api/tasks')
-    .then(response => {
-      this.tasks = response.data;
-    })
-    .catch(error => {
-      console.error('Error fetching:', error)
-    });
+
+  mounted() {
+    this.fetchDatafromAPI();
+  },
+
+  methods :{
+    fetchDatafromAPI(){
+      const api_url = 'http://localhost:8000/api/tasks';
+
+      axios.get(api_url)
+      .then((response) => {
+        console.log(response.data)
+        this.tasks = response.data;
+        console.log(this.tasks)
+
+      })
+      .catch((error) => {
+        console.error('Error fetching data:',error)
+      });
+    }
   }
 }
 </script>
-
 <style scoped>
-h2{
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.task{
+  border: 2px solid;
+  margin: 5px;
+  padding: 4px;
+  text-align: center;
+  
 }
 </style>
