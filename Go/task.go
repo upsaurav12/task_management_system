@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -66,7 +67,35 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTask(w http.ResponseWriter, r *http.Request) {
+	/*vars := mux.Vars(r)  // Get URL variables
+	taskID := vars["id"] // Get the task ID from the URL
 
+	db, err := connect()
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Query to get the task by ID
+	query := "SELECT id, title, description FROM tasks WHERE id = ?"
+	row := db.QueryRow(query, taskID) // Query for a single result
+
+	var task Task
+	if err := row.Scan(&task.ID, &task.Title, &task.Description); err != nil {
+		if err == sql.ErrNoRows {
+			// If no rows found, return a 404 status
+			http.Error(w, "Task not found", http.StatusNotFound)
+		} else {
+			// Otherwise, return a server error
+			http.Error(w, "Database query error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Set the response content type and return the task as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(task) // Return the task data*/
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
@@ -107,10 +136,61 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID := vars["id"]
+
+	var task Task
+	if err := json.NewDecoder(r.Body).Decode((&task)); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db, err := connect()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer db.Close()
+
+	query := "UPDATE tasks SET title = ?, description = ? WHERE id = ?"
+
+	_, err = db.Exec(query, task.Title, task.Description)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(fmt.Sprintf("Task %s updated", taskID))
 
 }
 func deleteTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	taskID := vars["id"]
 
+	db, err := connect()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer db.Close()
+
+	query := "DELETE FROM tasks WHERE id = ?"
+
+	_, err = db.Exec(query, taskID)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(fmt.Sprintf("Task %s is deleted ", taskID))
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -160,6 +240,14 @@ func main() {
 	r.HandleFunc("/api/tasks/{id}", updateTask).Methods("PUT")
 	r.HandleFunc("/api/tasks/{id}", deleteTask).Methods("DELETE")
 	r.HandleFunc("/api/tasks", func(w http.ResponseWriter, r *http.Request) {
+		// Handle preflight `OPTIONS` requests
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusNoContent) // 204 No Content
+	}).Methods("OPTIONS")
+
+	r.HandleFunc("/api/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		// Handle preflight `OPTIONS` requests
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
