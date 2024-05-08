@@ -1,4 +1,15 @@
 <template>
+
+<div>
+  <form @submit.prevent="addtask">
+    <label>Title</label>
+        <input type="text" class="title" placeholder="Enter the title" v-model="title" required>
+
+        <label>Description</label>
+        <input type="text" class="description" placeholder="Enter the desciption" v-model="description" required>
+        <button type="submit">Submit</button>
+  </form>
+</div>
   <div>
     <h1>Data from API:</h1>
     <ol>
@@ -20,6 +31,8 @@ export default {
   data(){
     return {
       tasks: [],
+      title: '',
+      description: '',
     };
   },
 
@@ -40,6 +53,29 @@ export default {
       })
       .catch((error) => {
         console.error('Error fetching data:',error)
+      });
+    },
+
+    addtask(){
+      const api_url1 = 'http://localhost:8000/api/tasks';
+      
+      const newTask = {
+        title: this.title,
+        description: this.description
+      };
+
+      axios
+      .post(api_url1 ,newTask)
+      .then((response) => {
+        this.tasks.push(response.data)
+
+        this.title = "";
+      this.description = "";
+
+      this.fetchDatafromAPI();
+      })
+      .catch((error) => {
+        console.error("Error adding task: ",error)
       });
     }
   }

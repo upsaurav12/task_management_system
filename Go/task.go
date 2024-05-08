@@ -1,22 +1,66 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
 
 type Task struct {
-	ID          string `json:"id"`
+	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
 var tasks []Task
 
+func connect() (*sql.DB, error) {
+	dsn := "saurav:SA@2003up_@tcp(localhost:3306)/tasks"
+
+	db, err := sql.Open("mysql", dsn)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return db, db.Ping()
+}
+
 func getTasks(w http.ResponseWriter, r *http.Request) {
+
+	db, err := connect()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	query := "SELECT id, title, description FROM tasks"
+
+	rows, err := db.Query(query)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	defer rows.Close()
+
+	var tasks []Task
+
+	for rows.Next() {
+		var task Task
+		if err := rows.Scan(&task.ID, &task.Title, &task.Description); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tasks = append(tasks, task)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
@@ -26,7 +70,40 @@ func getTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
+	var task Task
 
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	db, err := connect()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer db.Close()
+
+	query := "INSERT INTO tasks (title , description) VALUES(?, ?)"
+
+	result, err := db.Exec(query, task.Title, task.Description)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	taskID, err := result.LastInsertId()
+	if err != nil {
+		http.Error(w, "ERROR", http.StatusInternalServerError)
+		return
+	}
+	task.ID = int(taskID)
+
+	w.Header().Set("Content-Type", "appliation/json")
+	json.NewEncoder(w).Encode(task)
 }
 
 func updateTask(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +118,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Content-Type", "application/json")
 
 		if r.Method == http.MethodOptions {
 			// Handle preflight request
@@ -53,16 +131,26 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+
+	/*db, err := connect()
+
+	if err != nil {
+		log.Fatal("Failed to connect mysql:", err)
+	} else {
+		fmt.Println("Connected")
+	}
+	defer db.Close()*/
+
 	r := mux.NewRouter()
 	r.Use(corsMiddleware) // Apply the CORS middleware globally
 
 	// Define your routes...
 
 	// Pre-fill some tasks for testing
-	tasks = append(tasks, Task{ID: "1", Title: "First Task", Description: "First Description"})
+	/*tasks = append(tasks, Task{ID: "1", Title: "First Task", Description: "First Description"})
 	tasks = append(tasks, Task{ID: "2", Title: "Second Task", Description: "Second Description"})
 	tasks = append(tasks, Task{ID: "3", Title: "Third Task", Description: "Third Description"})
-	tasks = append(tasks, Task{ID: "4", Title: "Fourth Task", Description: "Fifth Description"})
+	tasks = append(tasks, Task{ID: "4", Title: "Fourth Task", Description: "Fifth Description"})*/
 
 	// Handle CORS preflight requests
 	// Define routes for the RESTful API
@@ -71,6 +159,13 @@ func main() {
 	r.HandleFunc("/api/tasks", createTask).Methods("POST")
 	r.HandleFunc("/api/tasks/{id}", updateTask).Methods("PUT")
 	r.HandleFunc("/api/tasks/{id}", deleteTask).Methods("DELETE")
+	r.HandleFunc("/api/tasks", func(w http.ResponseWriter, r *http.Request) {
+		// Handle preflight `OPTIONS` requests
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.WriteHeader(http.StatusNoContent) // 204 No Content
+	}).Methods("OPTIONS")
 
 	// Start the server on port 8000
 	log.Fatal(http.ListenAndServe(":8000", r))
