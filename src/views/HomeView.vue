@@ -4,16 +4,17 @@
   <form @submit.prevent="addtask" class="form-container">
         <input type="text" class="title" placeholder="Enter the title" v-model="title" required>
         <input type="text" class="description" placeholder="Enter the desciption" v-model="description" required>
+        <input type="text" class="priority" placeholder="Enter the priority" v-model.number="priority" required>
         <button type="submit">Submit</button>
   </form>
 </div>
   <div>
-    <h1>Data from API:</h1>
     <ol>
       <li v-for="item in tasks" :key="item.id">
         <div class="task">
           <h4>{{item.title}}</h4>
           <p>{{item.description}}</p>
+          <p>{{item.priority}}</p>
           <button class="delete" @click="deleteTask(item.id)">Delete</button>
         </div>
         </li>
@@ -31,6 +32,7 @@ export default {
       tasks: [],
       title: '',
       description: '',
+      priority: 0,
     };
   },
 
@@ -59,7 +61,8 @@ export default {
       
       const newTask = {
         title: this.title,
-        description: this.description
+        description: this.description,
+        priority: this.priority
       };
 
       axios
@@ -115,10 +118,16 @@ export default {
 .form-container input{
   padding: 10px;
   margin: 5px;
+  outline: none;
 }
 
 .form-container button{
   padding: 0 10px 0 10px;
   height: 40px;
+}
+
+.form-container .priority{
+  margin-left: 10px;
+  height: 30px;
 }
 </style>
