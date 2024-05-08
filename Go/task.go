@@ -15,6 +15,7 @@ type Task struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Priority    int    `json:"priority"`
 }
 
 var tasks []Task
@@ -41,7 +42,7 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	query := "SELECT id, title, description FROM tasks"
+	query := "SELECT id, title, description, priority FROM tasks"
 
 	rows, err := db.Query(query)
 
@@ -55,7 +56,7 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var task Task
-		if err := rows.Scan(&task.ID, &task.Title, &task.Description); err != nil {
+		if err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.Priority); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -115,9 +116,9 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	query := "INSERT INTO tasks (title , description) VALUES(?, ?)"
+	query := "INSERT INTO tasks (title , description , priority) VALUES(?, ?, ?)"
 
-	result, err := db.Exec(query, task.Title, task.Description)
+	result, err := db.Exec(query, task.Title, task.Description, task.Priority)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
