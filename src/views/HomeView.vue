@@ -6,6 +6,7 @@
         <input type="text" class="description" placeholder="Enter the desciption" v-model="description" required>
         <input type="text" class="priority" placeholder="Enter the priority" v-model.number="priority" required>
         <button type="submit">Submit</button>
+    <button @click="sort">Sort</button>
   </form>
 </div>
   <div>
@@ -83,7 +84,7 @@ export default {
       console.log("Hello this is delete button")
 
       const api_url2 = `http://localhost:8000/api/tasks/${id}`
-      
+
       axios
       .delete(api_url2)
       .then((response) => {
@@ -94,6 +95,12 @@ export default {
       .catch((error) =>{
         console.error("Error deleting task:" , error)
       });
+    },
+
+    sort(){
+      return this.tasks.sort((a,b) =>{
+        return b.priority - a.priority;
+      })
     }
   }
 }
