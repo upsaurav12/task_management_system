@@ -129,5 +129,7 @@ export default {
 .form-container .priority{
   margin-left: 10px;
   height: 30px;
+
+  
 }
 </style>
